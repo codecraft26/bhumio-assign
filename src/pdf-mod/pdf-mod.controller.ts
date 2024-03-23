@@ -1,32 +1,25 @@
-import { Controller, Get,Post,Res,Body, HttpStatus } from '@nestjs/common';
-import { Query } from '@nestjs/common';
+import { Controller, Get, Post, UploadedFile, UseInterceptors, Res } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { PdfService } from './pdf-mod.service';
 import { Response } from 'express';
-import { PdfModService } from './pdf-mod.service';
-import { UploadPdfDto } from './upload.dto';
 
-@Controller('pdf')
-export class PdfModController {
-    constructor(private readonly pdfModService: PdfModService) {}
-    @Get()
-    getHello(): any {
-        return {
-            message: 'Hello World!',
-            data: {
-                name: 'John Doe',
-            },
-        };
+@Controller('/pdf')
+export class PdfController {
+    constructor(private readonly pdfService: PdfService) {}
+
+    @Get('/fetch')
+    async fetchPdf(@Res() res: Response) {
+        // Use the actual file name here, e.g., 'example.pdf'
+        const pdfBuffer = await this.pdfService.fetchPdf('example.pdf');
+        res.setHeader('Content-Type', 'application/pdf');
+        res.send(pdfBuffer);
     }
 
-    @Get('load')
-    async loadPdf(@Query('path') path: string, @Res() res: Response) {
-        try {
-            const pdfData = await this.pdfModService.loadFile('./example.pdf');
-            res.setHeader('Content-Type', 'application/pdf');
-            res.send(pdfData);
-        } catch (error) {
-            res.status(500).send('Failed to load PDF file');
-        }
-    }
 
-   
+    @Post('/save')
+    @UseInterceptors(FileInterceptor('pdfBuffer'))
+    async savePdf(@UploadedFile() file: Express.Multer.File, @Res() res: Response) {
+        await this.pdfService.savePdf(file);
+        res.send('PDF saved successfully.');
+    }
 }

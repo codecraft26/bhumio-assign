@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Form Filler</title>
+    <!-- Include pdf-lib library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.16.0/pdf-lib.min.js"></script>
+</head>
+
+    <h1>PDF Form Filler</h1>
+    <input type="file" id="pdfInput" accept="application/pdf"><br><br>
+    <button onclick="loadPdf()">Load PDF</button><br><br>
+    <form enctype="multipart/form-data" action="Post"></form>
+    <object  id="pdfFrame" width="100%" height="500px"></object><br>
+    <button onclick="savePdf()">Save filled PDF</button>
+</form>
+
+    <script>
+        let pdfDoc; // Define pdfDoc at a higher level to make it accessible throughout the script
+    
+        async function loadPdf() {
+            const fileInput = document.getElementById('pdfInput');
+            if (fileInput.files.length === 0) {
+                alert('Please select a PDF file first.');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const fileReader = new FileReader();
+
+            fileReader.onload = async (event) => {
+                try {
+                    const arrayBuffer = event.target.result;
+                    pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer); // Load the PDF document from the local file
+
+                    // Here you would typically modify pdfDoc as needed, for example filling out form fields
+
+                    // Serialize the PDFDocument to bytes (a Uint8Array) for display in the iframe
+                    const pdfBytes = await pdfDoc.save();
+                    const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    document.getElementById('pdfFrame').data = pdfUrl;
+                } catch (error) {
+                    console.error('Error loading PDF:', error);
+                }
+            };
+
+            fileReader.readAsArrayBuffer(file);
+        }
+    
+        async function savePdf() {
+            if (!pdfDoc) {
+                alert('Please load a PDF file first.');
+                return;
+            }
+    
+            // Serialize the PDFDocument to bytes (a Uint8Array)
+            const pdfBytes = await pdfDoc.save();
+    
+            // Convert the Uint8Array to a Blob
+            const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
+    
+            // Send the filled PDF back to the server
+            const formData = new FormData();
+            formData.append('pdfBuffer', pdfBlob);
+    
+            try {
+                const response = await fetch('http://localhost:3000/pdf/save', {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                const data = await response.text();
+                alert(data);
+            } catch (error) {
+                console.error('Error saving PDF:', error);
+            }
+
+
+          
+        }
+    </script>
+</body>
+</html>
